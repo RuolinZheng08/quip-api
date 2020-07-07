@@ -300,7 +300,7 @@ class QuipClient(object):
             "member_ids": ",".join(member_ids),
         })
 
-    def new_document(self, content, format="html", title=None, member_ids=[]):
+    def new_document(self, content, format="html", title=None, member_ids=[], type="spreadsheet"):
         """Creates a new document from the given content.
 
         To create a document in a folder, include the folder ID in the list
@@ -316,6 +316,7 @@ class QuipClient(object):
             "format": format,
             "title": title,
             "member_ids": ",".join(member_ids),
+            "type": type
         })
 
     def copy_document(self, thread_id, folder_ids=None, member_ids=None,
@@ -465,6 +466,24 @@ class QuipClient(object):
             content=content,
             section_id=section_id,
             operation=operation)
+
+    def update_spreadsheet_headers(self, thread_id, *headers, **kwargs):
+        """Updates the headers of the named (or first) spreadsheet in the
+        given document.
+            client = quip.QuipClient(...)
+            client.add_to_spreadsheet(thread_id, "Header1", "Header2", "Header3")
+        """
+        content = "".join(["<td>%s</td>" % header for header in headers])
+        if kwargs.get("name"):
+            spreadsheet = self.get_named_spreadsheet(kwargs["name"], thread_id)
+        else:
+            spreadsheet = self.get_first_spreadsheet(thread_id)
+        section_id = self.get_first_row_item_id(spreadsheet)
+        return self.edit_document(
+            thread_id=thread_id,
+            content=content,
+            section_id=section_id,
+            operation=self.PREPEND)
 
     def update_spreadsheet_row(self, thread_id, header, value, updates, **args):
         """Finds the row where the given header column is the given value, and
@@ -644,7 +663,7 @@ class QuipClient(object):
 
     def get_row_ids(self, row_tree):
         """Returns the ids of items in the given row `ElementTree`."""
-        return [x.attrib["id"] for x in row_tree]
+        return [x.attrib.get("id", "") for x in row_tree]
 
     def get_spreadsheet_header_items(self, spreadsheet_tree):
         """Returns the header row in the given spreadsheet `ElementTree`."""
